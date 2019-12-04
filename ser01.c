@@ -7,6 +7,7 @@
 
 #include<stdio.h>
 #include<sys/socket.h>
+#include<sys/wait.h>
 #include<stdlib.h>
 #include<unistd.h>
 #include<string.h>
@@ -14,12 +15,34 @@
 #define SERV_PORT 8888
 #define MAXLINE 20
 #define LISTENQ 1000
+
+
+void sig_chld(int signo)
+{
+    pid_t pid;
+    int stat;
+
+    printf("&&&&&&&&&&&&&&&&&&&&\n");
+    while ((pid = waitpid(-1, &stat, WNOHANG)) > 0) {
+        printf("child %d terminated\n", pid);
+    }
+    return;
+}
 void str_echo(int sock_fd)
 {
-    ssize_t n;
-    char buf[MAXLINE];
-    n = read(sock_fd, buf, MAXLINE);
-    write(sock_fd, buf, n);
+    while(1) {
+        ssize_t n;
+        char buf[MAXLINE];
+        bzero(buf, MAXLINE);
+        printf("1 = %s\n", buf);
+        n = recv(sock_fd, buf, MAXLINE, 0);
+        if (n == 0 || n < 0) { 
+            exit(0);
+        }
+        printf("2 = %s %d\n", buf, n); 
+        send(sock_fd, buf, n, 0);
+        printf("3 = %s\n", buf);
+    }
 }
 
 int main()
@@ -31,6 +54,7 @@ int main()
 
     listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 
+    signal(SIGCHLD, sig_chld);
     bzero(&serv_addr, sizeof(struct sockaddr_in));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -39,12 +63,13 @@ int main()
     bind(listen_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 
     listen(listen_fd, LISTENQ);
-
     while(1) {
+        printf("*****************\n");
         cli_len = sizeof(cli_addr);
         conn_fd = accept(listen_fd, (struct sockaddr *)&serv_addr, &cli_len);
 
-        if ((child_pid == fork()) == 0) {
+        if ((child_pid = fork()) == 0) {
+            printf("lalaal\n");
             close(listen_fd);
             str_echo(conn_fd);
             exit(0);

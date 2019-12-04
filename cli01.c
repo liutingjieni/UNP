@@ -14,17 +14,24 @@
 #define MAXLINE 20
 #define SERV_PORT 8888
 
-void str_cli(FILE *fp, int sock_fd)
+void str_cli(int sock_fd)
 {
     char sendline[MAXLINE], recvline[MAXLINE];
 
-    while (fgets(sendline, MAXLINE, fp) != NULL) {
-        write(sock_fd, sendline, strlen(sendline));
+    while (scanf("%s", sendline) != 0) {
+        printf("^^^^^^^^^^^\n");
+        if (send(sock_fd, sendline, strlen(sendline), 0) < 0) {
+            printf("send\n");
+        }
+        printf("sendline = %s\n",sendline);
 
-        if (readline(sock_fd, recvline, MAXLINE) == 0) {
+        if (recv(sock_fd, recvline, MAXLINE, 0) == 0) {
 
         }
-        fputs(recvline, stdout);
+        printf("recvline = %s\n", recvline);
+        bzero(sendline, MAXLINE);
+        bzero(recvline, MAXLINE);
+
     }
 }
 
@@ -39,11 +46,12 @@ int main(int argc, char *argv[])
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(SERV_PORT);
 
-    Inet_pton(AF_INET, argv[1], &serv_addr.sin_addr);
+    inet_pton(AF_INET, argv[1], &serv_addr.sin_addr);
 
     connect(sock_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 
-    str_cli(stdin, sock_fd);
+    str_cli(sock_fd);
     exit(0);
+
 
 }
