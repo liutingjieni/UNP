@@ -22,13 +22,35 @@ void dg_echo(int sockfd, struct sockaddr* pcliaddr, socklen_t clilen)
     char mesg[MAXLINE];
 
     while (1) {
-        printf("**********\n");
         len = clilen;
         n = recvfrom(sockfd, mesg, MAXLINE, 0, pcliaddr, &len);
-        printf("%d %s\n", n, mesg);
         sendto(sockfd, mesg, n, 0, pcliaddr, len);
     }
 }
+
+static int count;
+static void recvfrom_int(int signo)
+{
+    printf("\nrecvived %d datagrams\n", count);
+    exit(0);
+}
+
+void dg_echo_02(int sockfd, struct sockaddr* pcliaddr, socklen_t clilen)
+{
+    socklen_t len;
+    char mesg[MAXLINE];
+    int n = 30 * 1400;
+    signal(SIGINT, recvfrom_int);
+
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &n, sizeof(n));
+    while (1) {
+        len = clilen;
+        recvfrom(sockfd, mesg, MAXLINE, 0, pcliaddr, &len);
+
+        count++;
+    }
+}
+
 
 int main()
 {
@@ -44,5 +66,5 @@ int main()
 
     bind(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr));
 
-    dg_echo(sockfd, (struct sockaddr *)&cliaddr, sizeof(cliaddr));
+    dg_echo_02(sockfd, (struct sockaddr *)&cliaddr, sizeof(cliaddr));
 }

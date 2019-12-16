@@ -15,6 +15,7 @@
 #define SERV_PORT 8888
 #define MAXLINE 20
 
+//未连接套接字
 void dg_cli(FILE *fp, int sockfd, const struct sockaddr *pservaddr,
                                   socklen_t servlen)
 {
@@ -22,15 +23,41 @@ void dg_cli(FILE *fp, int sockfd, const struct sockaddr *pservaddr,
     char sendline[MAXLINE], recvline[MAXLINE+1];
 
     while (scanf("%s", sendline) != 0) {
-        printf("%s\n", sendline);
         sendto(sockfd, sendline, strlen(sendline), 0, pservaddr, servlen);
-        printf("%s\n", sendline);
-
         n = recvfrom(sockfd, recvline, MAXLINE, 0, NULL, NULL);
-        printf("%d\n", n);        
         recvline[n] = 0;
-        printf("%s", recvline);
+        printf("%s\n", recvline);
 
+    }
+}
+//已连接UDP套接字
+int dg_cli_02(FILE *fp, int sockfd, const struct sockaddr *pservaddr, 
+                                        socklen_t servlen)
+{
+    int n;
+    char sendline[MAXLINE], recvline[MAXLINE + 1];
+
+    if (connect(sockfd, (struct sockaddr *)pservaddr, servlen) < 0) {
+        perror("connect");
+    }
+    while (fgets(sendline, MAXLINE, fp) != NULL) {
+        write(sockfd, sendline, strlen(sendline));
+         n  = read(sockfd, recvline, MAXLINE);
+        recvline[n] = 0;
+        fputs(recvline, stdout);
+    }
+}
+#define NDG 2000
+#define DGLEN 1400
+//UDP缺乏流量控制
+int dg_cli_03(FILE *fp, int sockfd, const struct sockaddr* pservaddr,
+                                                socklen_t servlen)
+{
+    int i;
+    char sendline[DGLEN];
+
+    for (i = 0; i < NDG; i++) {
+        sendto(sockfd, sendline, DGLEN, 0, pservaddr, servlen);
     }
 }
 
@@ -45,11 +72,11 @@ int main(int argc, char *argv[2])
 
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(7);
-    inet_pton(AF_INET, "127.0.0.1", &servaddr.sin_port);
+    servaddr.sin_port = htons(SERV_PORT);
+    inet_pton(AF_INET, argv[1], &servaddr.sin_addr);
     
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    dg_cli(stdin, sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
+    dg_cli_03(stdin, sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
 
     exit(0);
 }
